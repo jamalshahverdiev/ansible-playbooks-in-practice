@@ -70,11 +70,11 @@ $ cd ansible-playbooks-in-practice/cisco-playbooks/cisco-daily-using-playbook/
 $ git clone https://github.com/networktocode/ntc-ansible --recursive
 ```
 
-#####Edit ansible.cfg file like as following (Don't forget to change to right library and template path in your workplace. Change /home/jshahverdiev/ansible-playbooks/ansible-cisco-playbooks path to your right place.):
+#####Edit ansible.cfg file like as following (Don't forget to change to right library and template path in your workplace. Change /home/jshahverdiev/ path to your right place.):
 ```sh
 $ cat /etc/ansible/ansible.cfg | egrep -v '^#|^$'
 [defaults]
-library = /home/jshahverdiev/ansible-playbooks/ansible-cisco-playbooks/ntc-ansible/library/
+library = /home/jshahverdiev/ansible-playbooks-in-practice/cisco-playbooks/cisco-daily-using-playbook/ntc-ansible/library/
 host_key_checking = False
 [privilege_escalation]
 [paramiko_connection]
