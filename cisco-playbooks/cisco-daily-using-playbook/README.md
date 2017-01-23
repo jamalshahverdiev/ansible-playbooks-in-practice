@@ -65,8 +65,8 @@ $ cp /etc/ansible/ansible.cfg ~/
 #####First of all install python module and clone code files from GitHub repositories. Go downloaded folder and download libraries from GitHub repository.
 ```sh
 $ sudo pip install ntc-ansible
-$ git clone https://github.com/jamalshahverdiev/ansible-useful-playbooks.git
-$ 
+$ git clone https://github.com/jamalshahverdiev/ansible-playbooks-in-practice.git
+$ cd ansible-playbooks-in-practice/cisco-playbooks/cisco-daily-using-playbook/ 
 $ git clone https://github.com/networktocode/ntc-ansible --recursive
 ```
 
