@@ -1,0 +1,78 @@
+---
+- name: Control Cisco devices
+  hosts: ciscors
+  strategy: debug
+  connection: local
+  gather_facts: False
+
+  vars:
+    ciscoios: 'cisco_ios'
+    ciscoiosssh: 'cisco_ios_ssh'
+    localfile: 'images/ios.bin'
+    remotefile: 'c3745-adventerprisek9sna.bin'
+
+  tasks:
+  - name: Show ip interface brief in JSON
+    ntc_show_command:
+      connection: ssh
+      template_dir: "{{ playbook_dir }}/ntc-ansible/ntc-templates/templates/"
+      platform: "{{ ciscoios }}"
+      command: 'show ip interface brief'
+      host: "{{ inventory_hostname }}"
+      username: "{{ user }}"
+      password: "{{ pass }}"
+      secret: "{{ secret }}"
+    register: result
+
+  - debug: var=result 
+
+  - name: Save running-configuration to specified remote file
+    ntc_save_config:
+      platform: "{{ ciscoiosssh }}"
+      remote_file: "running.cfg"
+      host: "{{ inventory_hostname }}"
+      username: "{{ user }}"
+      password: "{{ pass }}"
+      secret: "{{ secret }}"
+
+  - name: Send commands from file
+    ntc_config_command:
+      connection: ssh
+      platform: "{{ ciscoiosssh }}"
+      commands_file: "send_commands.txt"
+      host: "{{ inventory_hostname }}"
+      username: "{{ user }}"
+      password: "{{ pass }}"
+      secret: "{{ secret }}"
+
+  - name: Send command from playbook
+    ntc_config_command:
+      connection: ssh
+      platform: "{{ ciscoiosssh }}"
+      commands:
+        - hostname "{{ inventory_hostname }}"
+        - ip name-server 8.8.8.8 8.8.4.4
+        - end
+      host: "{{ inventory_hostname }}"
+      username: "{{ user }}"
+      password: "{{ pass }}"
+      secret: "{{ secret }}"
+
+  - name: Upload binary file to the Cisco devices
+    ntc_file_copy:
+      local_file: "{{ localfile }}"
+      remote_file: "{{ remotefile }}"
+      platform: "{{ ciscoiosssh }}"
+      username: "{{ user }}"
+      password: "{{ pass }}"
+      secret: "{{ secret }}"
+      host: "{{ inventory_hostname }}"
+
+  - name: Save running-config startup-config and to local machine
+    ntc_save_config:
+      local_file: "images/{{ inventory_hostname }}.cfg"
+      platform: "{{ ciscoiosssh }}"
+      username: "{{ user }}"
+      password: "{{ pass }}"
+      secret: "{{ secret }}"
+      host: "{{ inventory_hostname }}"

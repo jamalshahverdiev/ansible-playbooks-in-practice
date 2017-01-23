@@ -1,0 +1,81 @@
+---
+- name: Bootstrap sevrer for future ansible runs
+  hosts: allservers
+  remote_user: root
+
+  vars:
+   user_name: jshahverdiev
+   user_pass: $6$rumburak$VWBmX.2lG3EueFzONEZBVdr68xWO4mjjZQ/SuF.nuIrav11YNQpT6FEwMGZAA7dPhaDX/Y9PwhTDupSYEmktl0
+
+  tasks:
+  - name: Update apt cache
+    apt: update_cache=yes
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+
+  - name: Safe aptitude upgrade
+    apt: upgrade=safe
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: Update yum cache
+    yum: name=* state=latest
+    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "6") or (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+  - name: Add sudo group
+    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "6") or (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+    group:
+      name: sudo
+      state: present
+
+  - name: Add sudo group to sudoers file
+    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "6") or (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+    lineinfile: dest=/etc/sudoers
+                regexp=''
+                insertafter=EOF
+                line='%sudo   ALL=(ALL)       ALL'
+
+  - name: Add new user
+    user: >
+      name={{ user_name }}
+      password={{ user_pass }}
+      shell=/bin/bash
+      groups=sudo
+      append=yes
+      generate_ssh_key=yes
+      ssh_key_bits=2048
+      state=present
+
+  - name: Desktop user public key for remote server new user
+    authorized_key:
+      user: "{{ user_name }}"
+      key: "{{ lookup('file', 'certificates/id_rsa.pub') }}"
+      state: present
+
+  - name: Change SSH port
+    lineinfile: 
+      dest: /etc/ssh/sshd_config
+      regexp: "^Port"
+      line: "Port 30000"
+      state: present
+#      notify: restart ssh 
+
+  - name: Remove root SSH access
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      regexp: "^PermitRootLogin"
+      line: "PermitRootLogin no"
+      state: present
+
+  - name: Remove password SSH access
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      regexp: "^PasswordAuthentication"
+      line: "PasswordAuthentication no"
+      state: present
+
+  - name: Reboot the server
+    command: /sbin/reboot
+
+  handlers:
+  - name: restart ssh
+    service: name=ssh state=restarted

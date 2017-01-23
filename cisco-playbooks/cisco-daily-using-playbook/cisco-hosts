@@ -1,0 +1,11 @@
+[ciscors:vars]
+user=jshahverdiev
+pass=freebsd
+secret=freebsd
+
+[ciscors]
+172.16.100.10
+172.16.100.20
+#172.16.100.30
+#172.16.100.40
+#172.16.100.50
