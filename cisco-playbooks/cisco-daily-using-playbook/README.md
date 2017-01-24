@@ -129,6 +129,7 @@ secret=freebsd
 ```
 #####At the end execute the following command to do all things in our routers:
 ```sh
+$ sudo ansible-playbook -i cisco-hosts cisco-playbooks.yml
 PLAY [Control Cisco devices and get Json formatted data] ***********************
 ```
 ![result](images/result.jpg)
