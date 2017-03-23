@@ -64,33 +64,33 @@ My current place of playbooks is ``/home/jshahverdiev/ansible-playbooks/ansible-
 
 * Edit ``ansible.cfg`` file like as following (Don't forget to change to right library and template path in your workplace. Change ``/home/jshahverdiev/`` path to your right place)::
   
-  $ cat /etc/ansible/ansible.cfg | egrep -v '^#|^$'
-  [defaults]
-  library = /home/jshahverdiev/ansible-playbooks-in-practice/cisco-playbooks/cisco-daily-using-playbook/ntc-ansible/library/
-  host_key_checking = False
-  [privilege_escalation]
-  [paramiko_connection]
-  [ssh_connection]
-  control_path = %(directory)s/ansible-ssh-%%C
-  [accelerate]
-  [selinux]
-  [colors]
+    $ cat /etc/ansible/ansible.cfg | egrep -v '^#|^$'
+    [defaults]
+    library = /home/jshahverdiev/ansible-playbooks-in-practice/cisco-playbooks/cisco-daily-using-playbook/ntc-ansible/library/
+    host_key_checking = False
+    [privilege_escalation]
+    [paramiko_connection]
+    [ssh_connection]
+    control_path = %(directory)s/ansible-ssh-%%C
+    [accelerate]
+    [selinux]
+    [colors]
 
 The ``ntc-ansible/library/`` folder contains libraries which we will use in our playbooks.
 * Inventory file of our playbook file must contains the following lines (``username``, ``password``, ``secret`` variables for our routers. Inventory hosts name is ciscors)::
   
-  $ cat cisco-hosts
-  [ciscors:vars]
-  user=jshahverdiev
-  pass=freebsd
-  secret=freebsd
+    $ cat cisco-hosts
+    [ciscors:vars]
+    user=jshahverdiev
+    pass=freebsd
+    secret=freebsd
 
-  [ciscors]
-  172.16.100.10
-  172.16.100.20
-  172.16.100.30
-  172.16.100.40
-  172.16.100.50
+    [ciscors]
+    172.16.100.10
+    172.16.100.20
+    172.16.100.30
+    172.16.100.40
+    172.16.100.50
 
 **I will descibe all tasks in playbook file as following.**
 * Execute in all routers command **show ip interface brief** and get back result with JSON format::
