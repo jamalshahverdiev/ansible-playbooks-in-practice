@@ -15,33 +15,33 @@ In this article I will show how to use ansible playbooks to control Cisco IOS de
 * My topology looks like following:
 .. image:: images/topology.jpg
 
-* To configure Cisco network devices, use the following commands. This commands configure IP address, username with password, secret password, generates SSH keys, activate ssh access and SCP access to the routers (Don't forget change IP address for other routers:
-.. toctree::
- R1# format flash:
- Format operation may take a while. Continue? [confirm]
- Format operation will destroy all data in "flash:".  Continue? [confirm]
- R1# configure terminal
- R1(config)# int fa 0/0 
- R1(config)# no shut
- R1(config)# ip address 172.16.100.10 255.255.255.0
- R1(config)# ip domain name cisco.local
- R1(config)# crypto key generate rsa
- R1(config)# service password-encryption
- R1(config)# username jshahverdiev privilege 15 password freebsd
- R1(config)# enable secret freebsd
- R1(config)# aaa new-model
- R1(config)# aaa authentication login default local
- R1(config)# aaa authorization exec default local
- R1(config)# ip scp server enable
- R1(config)# line vty 0 4
- R1(config-line)# transport input ssh
- R1(config-line)# logging synchronous
- R1(config-line)# exec-timeout 60 0
- R1(config-line)# do wr
+* To configure Cisco network devices, use the following commands. This commands configure IP address, username with password, secret password, generates SSH keys, activate ssh access and SCP access to the routers (Don't forget change IP address for other routers::
+  
+     R1# format flash:
+     Format operation may take a while. Continue? [confirm]
+     Format operation will destroy all data in "flash:".  Continue? [confirm]
+     R1# configure terminal
+     R1(config)# int fa 0/0 
+     R1(config)# no shut
+     R1(config)# ip address 172.16.100.10 255.255.255.0
+     R1(config)# ip domain name cisco.local
+     R1(config)# crypto key generate rsa
+     R1(config)# service password-encryption
+     R1(config)# username jshahverdiev privilege 15 password freebsd
+     R1(config)# enable secret freebsd
+     R1(config)# aaa new-model
+     R1(config)# aaa authentication login default local
+     R1(config)# aaa authorization exec default local
+     R1(config)# ip scp server enable
+     R1(config)# line vty 0 4
+     R1(config-line)# transport input ssh
+     R1(config-line)# logging synchronous
+     R1(config-line)# exec-timeout 60 0
+     R1(config-line)# do wr
 
- Note: If you want to use tacacs+ then use the following commands:
-       R1(config)# aaa authentication login default group tacacs+
-       R1(config)# aaa authorization exec default group tacacs+
+     Note: If you want to use tacacs+ then use the following commands:
+           R1(config)# aaa authentication login default group tacacs+
+           R1(config)# aaa authorization exec default group tacacs+
 
 
 * If you want to debug SCP or SSH in your routers use the following commands::
