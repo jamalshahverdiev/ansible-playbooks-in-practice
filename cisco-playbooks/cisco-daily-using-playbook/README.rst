@@ -45,9 +45,9 @@ In this article I will show how to use ansible playbooks to control Cisco IOS de
 
 
 * If you want to debug SCP or SSH in your routers use the following commands::
-  
-  R1# debug ip scp
-  R1# debug ip ssh
+     
+     R1# debug ip scp
+     R1# debug ip ssh
 
 * Let's start to configure Fedora desktop with ansible installed to use playbooks. Copy original file of ``/etc/ansible/ansible.cfg`` to backup because we will change this file for new library::
   
