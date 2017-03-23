@@ -2,8 +2,6 @@ In this article I will show how to use ansible playbooks to control Cisco IOS de
 
 * Routers IP address list as following:
 .. toctree:: 
-   :maxdepth: 2
-
   172.16.100.10
   172.16.100.20
   172.16.100.30
