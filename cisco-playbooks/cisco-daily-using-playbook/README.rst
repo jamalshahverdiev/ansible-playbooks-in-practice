@@ -1,6 +1,6 @@
-**
+*********************************
 In this article I will show how to use ansible playbooks to control Cisco IOS devices. We will test to send commands from file and from playbook, write configs, send file and get file to Cisco routers. For my test environment I used GNS3 with Cisco 3745 Routers. I have configured 5 Routers which is connected to Cloud1 interface. Cloud interface is already connected to VMNet8 virtual network card which is looking to the VMware workstation NAT subnet and my Fedora desktop is works in this subnet. All routers configured before with username "jshahverdiev" and password "freebsd" but, if you want, you can configure all your devices with tacacs+ and domain controller from this [link](https://jamalshahverdiev.wordpress.com/2016/07/14/centos-6-7-tacacs-gns3cisco-3600-domain-controller-integration/).
-**
+*********************************
 
 #####IP address list as following. 
 #####Routers: 
