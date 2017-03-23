@@ -17,6 +17,7 @@ IP address list as following.
 .. image:: images/topology.jpg
 
 * To configure Cisco network devices, use the following commands. This commands configure IP address, username with password, secret password, generates SSH keys, activate ssh access and SCP access to the routers (Don't forget change IP address for other routers:
+
   R1# format flash:
   Format operation may take a while. Continue? [confirm]
   Format operation will destroy all data in "flash:".  Continue? [confirm]
