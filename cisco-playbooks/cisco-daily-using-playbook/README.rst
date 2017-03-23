@@ -17,6 +17,7 @@ IP address list as following.
 .. image:: images/topology.jpg
 
 * To configure Cisco network devices, use the following commands. This commands configure IP address, username with password, secret password, generates SSH keys, activate ssh access and SCP access to the routers (Don't forget change IP address for other routers:
+
 .. code-block:: python
   R1# format flash:
   Format operation may take a while. Continue? [confirm]
@@ -43,6 +44,7 @@ IP address list as following.
   Note: If you want to use tacacs+ then use the following commands:
         R1(config)# aaa authentication login default group tacacs+
         R1(config)# aaa authorization exec default group tacacs+
+
 
 * If you want to debug SCP or SSH in your routers use the following commands::
   
