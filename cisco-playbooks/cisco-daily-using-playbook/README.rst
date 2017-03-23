@@ -93,7 +93,7 @@ The ``ntc-ansible/library/`` folder contains libraries which we will use in our 
     172.16.100.50
 
 **I will descibe all tasks in playbook file as following.**
-* Execute in all routers command **show ip interface brief** and get back result with JSON format::
+Execute in all routers command **show ip interface brief** and get back result with JSON format::
   
   - name: Show ip interface brief
 
