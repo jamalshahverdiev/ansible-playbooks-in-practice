@@ -1,0 +1,7 @@
+[mysqld]
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+symbolic-links=0
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
+bind-address={{ansible_host}}

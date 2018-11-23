@@ -1,0 +1,14 @@
+[Unit]
+Description=Keycloak Service
+After=network.target
+
+[Service]
+ExecStart=/bin/bash -c "{{keycloakPath}}/bin/standalone.sh -Djboss.bind.address=0.0.0.0 -Djboss.bind.address.management=0.0.0.0 & echo $! > {{keycloakPath}}/keycloak.pid"
+PIDFile={{keycloakPath}}/keycloak.pid
+Restart=always
+Type=simple
+User=root
+
+[Install]
+WantedBy=multi-user.target
+

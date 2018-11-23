@@ -1,0 +1,58 @@
+- name: Download MySQL repository RPM
+  get_url:
+    url: "https://dev.mysql.com/get/{{mysqlversion}}"
+    dest: /vagrant
+    force: yes
+    mode: 0644
+    owner: vagrant
+    group: vagrant
+    validate_certs: no
+    timeout: 60
+  delay: 1
+  retries: 2
+  register: dwnld_result
+  until: dwnld_result is success
+
+- name: Install MySQL repository RPM
+  command: "yum localinstall -y /vagrant/{{mysqlversion}}"
+  when: dwnld_result is success
+  register: repos_installed
+
+- name: Install MySQL
+  yum: pkg={{item}} state=installed
+  with_items:
+   - mysql-server 
+  when: repos_installed is success
+  register: mysql_installed
+
+- name: Create MySQL config file
+  template:
+    src: temps/my.cnf.j2
+    dest: /etc/my.cnf
+    backup: yes
+  register: mysql_config_ready
+  when: mysql_installed is success
+
+- name: Start and enable MySQL service
+  systemd:
+    state: started
+    name: mysqld
+    enabled: yes
+  register: mysql_start_service
+  when: mysql_config_ready is success
+
+- name: Change mysql root password
+  shell: mysqladmin -u root -p{{mysqlchpasscom}} password '{{mysqlrootpass}}'
+  register: mysql_root_pass_changed
+  when: mysql_start_service is success
+
+- name: Create MySQL Database
+  shell: mysql -uroot -p{{mysqlrootpass}} -e 'CREATE DATABASE {{dbname}};'
+  register: db_created
+  when: mysql_root_pass_changed is success
+
+- name: Create user pass for our database
+  shell: mysql -uroot -p{{mysqlrootpass}} -e "GRANT ALL PRIVILEGES ON {{dbname}}.* TO '{{dbuser}}'@'%' IDENTIFIED BY '{{dbpass}}';"
+  register: db_user_ready
+  when: db_created is success 
+

@@ -1,0 +1,8 @@
+---
+- hosts: "{{ invt_name }}"
+  become: true
+  gather_facts: no
+  tasks:
+    - include_tasks: tasks/deploy-{{ invt_name }}.yml
+  vars_files:
+    - ['vars/{{invt_name}}.yml']

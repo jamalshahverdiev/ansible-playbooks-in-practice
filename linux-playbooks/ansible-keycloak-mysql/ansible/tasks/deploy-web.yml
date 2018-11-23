@@ -1,0 +1,137 @@
+- name: Create Keycloak Service Unit file
+  template:
+    src: temps/keycloak.service.j2
+    dest: /etc/systemd/system/keycloak.service 
+    backup: yes
+  register: service_unit_ready
+
+- name: Create Application Folder
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0775
+  with_items:
+   - /app
+  register: appfolder_created
+  when: service_unit_ready is success  
+
+- name: remove collected files and directories
+  file:
+    path: "{{keycloakPath}}"
+    state: absent
+  register: clean_keycloak
+  when: appfolder_created is success
+
+- name: Download and unarchive Keycloak 
+  unarchive:
+    src: "{{keycloak_url}}"
+    dest: /app
+    remote_src: yes
+  register: keycloak_downloaded
+  when: clean_keycloak is success
+        
+- name: Rename Keycloak folder
+  shell: mv /app/{{keycloakrename}} "{{keycloakPath}}"
+  register: keycloak_renamed
+  when: keycloak_downloaded is success
+
+- name: Create MySQL Driver folder
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0775
+    recurse: yes
+  with_items:
+   - "{{keycloakPath}}/modules/system/layers/base/com/mysql/main"
+  register: mysql_driverfolder_created
+  when: keycloak_renamed is success
+
+- name: remove collected mysql files and directories
+  file:
+    path: "{{keycloakPath}}/modules/system/layers/base/com/mysql/main/*"
+    state: absent
+  register: clean_mysqlcon
+  when: mysql_driverfolder_created is success
+
+- name: Download and unarchive "{{mysqlconnector}}".zip 
+  unarchive:
+    src: "{{mysqlconnectorUrl}}/{{mysqlconnector}}.zip" 
+    dest: "{{keycloakPath}}/modules/system/layers/base/com/mysql/main/"
+    remote_src: yes
+  register: connector_downloaded
+  when: mysql_driverfolder_created is success
+
+- name: Check if mysql connector jar file exists
+  stat: path="{{keycloakPath}}/modules/system/layers/base/com/mysql/main/{{mysqlconnector}}/{{mysqlconnector}}.jar"
+  register: file
+  when: connector_downloaded is success
+
+- name: Copy mysql connector main folder
+  copy: 
+    src: "{{keycloakPath}}/modules/system/layers/base/com/mysql/main/{{mysqlconnector}}/{{mysqlconnector}}.jar" 
+    dest: "{{keycloakPath}}/modules/system/layers/base/com/mysql/main/"
+    remote_src: yes
+  register: mysqlcon_copied 
+  when: file.stat.exists
+
+- name: remove collected mysql files and directories
+  shell: rm -rf "{{keycloakPath}}/modules/system/layers/base/com/mysql/main/{{mysqlconnector}}" ; true 
+  register: clean_mysqlcon_folder
+  when: mysqlcon_copied is success
+
+- name: Create Module xml file
+  template:
+    src: temps/module.xml.j2
+    dest: "{{keycloakPath}}/modules/system/layers/base/com/mysql/main/module.xml"
+    backup: yes
+  register: module_xml_ready
+  when: clean_mysqlcon_folder is success
+  #when: mysqlcon_copied is success
+
+- name: Create Standalone xml file
+  template:
+    src: temps/standalone.xml.j2
+    dest: "{{keycloakPath}}/standalone/configuration/standalone.xml"
+    backup: yes
+  register: standalone_xml_ready
+  when: module_xml_ready is success
+
+- name: Reload new Daemons
+  systemd:
+    daemon_reload: yes
+  register: reload_daemon
+  when: standalone_xml_ready is success
+
+- name: Start Keycloak Service
+  systemd:
+    name: keycloak
+    state: restarted
+    enabled: yes
+  register: service_started
+  when: reload_daemon is success
+
+- name: Add Keycloak appuser
+  shell: "{{keycloakPath}}/bin/add-user.sh --silent=true {{ appuser }} {{ apppasswd }} ManagementRealm"
+  register: appuser_added
+  when: service_started is success  
+
+- pause:
+   seconds: 30
+  when: appuser_added is success 
+  register: wait_sometime
+
+- uri:
+    url: http://10.1.42.102:9990/console/App.html
+    return_content: yes
+  register: webpage
+  when: wait_sometime is success
+
+- name: Fail if Management Interface is not in the page content
+  fail:
+  when: "'Management Interface' not in webpage.content"
+  
+  
