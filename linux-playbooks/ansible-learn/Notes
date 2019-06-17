@@ -1,0 +1,31 @@
+# Ping all hosts from inventory file which is stored in the ansible.cfg file
+ansible all -m ping -o
+
+# The following command will work only after ssh token authentication
+ansible all -i centos1, -m ping
+
+# Print Hello world in the remote "centos1" server
+ansible all -m debug
+
+# Debug with custom message
+ansible all -m debug --args='msg="This is a custom debug message" verbosity=3'
+
+# High level verbosity
+ansible all -vvv -m debug --args='msg="This is a custom debug message" verbosity=3'
+
+# Look at the 'debug' documentation
+ansible-doc debug
+
+# List hosts under 'centos'
+ansible centos --list-hosts
+  hosts (3):
+    centos1
+    centos2
+    centos3
+
+# Find with regex which match with all end in 3 
+ansible ~.*3 --list-hosts
+  hosts (2):
+    centos3
+    ubuntu3
+
