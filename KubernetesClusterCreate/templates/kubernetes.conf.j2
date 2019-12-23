@@ -1,0 +1,14 @@
+stream {
+    upstream kubernetes {
+{% for controllerIP in controllerIps %}
+        server {{controllerIP}}:6443;
+{% endfor %}
+    }
+
+    server {
+        listen 6443;
+        listen 443;
+        proxy_pass kubernetes;
+    }
+}
+

@@ -1,0 +1,47 @@
+- name: Install Worker Packages
+  apt:
+    name: ['socat', 'conntrack', 'ipset']
+    state: present
+    update_cache: true
+  register: installPacks
+  tags: installPacks
+
+- name: Enable IPForward in workers
+  sysctl:
+    name: net.ipv4.conf.all.forwarding 
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  register: enableIPforward
+  tags: enableIPforward
+  when: installPacks is success
+
+- name: Creates Services Directories of workers
+  file:
+    path: "{{item}}"
+    state: directory
+  with_items:
+    - /etc/cni/net.d 
+    - /opt/cni/bin 
+    - /var/lib/kubelet 
+    - /var/lib/kube-proxy 
+    - /var/lib/kubernetes
+    - /var/log/kubernetes
+    - /var/run/kubernetes
+    - /etc/containerd
+  tags: createKubeFolders
+  register: createKubeFolders
+  when: enableIPforward is success
+
+- name: Disable SWAP since kubernetes can't work with swap enabled (1/2)
+  shell: |
+    swapoff -a
+  when: createKubeFolders is success
+
+- name: Disable SWAP in fstab since kubernetes can't work with swap enabled (2/2)
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+  when: createKubeFolders is changed

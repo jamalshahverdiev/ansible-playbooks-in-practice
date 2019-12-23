@@ -1,0 +1,14 @@
+[Unit]
+Description=Kubernetes Kube Proxy
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-proxy \
+  --log-dir=/var/log/kubernetes \
+  --config=/var/lib/kube-proxy/kube-proxy-config.yaml \
+  --logtostderr=false
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

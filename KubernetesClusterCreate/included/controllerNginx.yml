@@ -1,0 +1,36 @@
+---
+- name: Install nginx package
+  apt: 
+    name: nginx
+    state: present
+  register: nginxInstall
+  tags: nginxInstall
+
+- name: Configure kubernetes.conf vHost
+  template:
+    src: "templates/kubernetes.default.svc.cluster.local.j2"
+    dest: "/etc/nginx/sites-available/kubernetes.default.svc.cluster.local"
+  tags: configureKubernetesVhost
+  register: configureKubernetesVhost
+  when: nginxInstall is success
+
+- name: Synlink Nginx Configuration files
+  file:
+    src: "/etc/nginx/sites-available/kubernetes.default.svc.cluster.local"
+    dest: "/etc/nginx/sites-enabled/kubernetes.default.svc.cluster.local"
+    state: link
+  when: configureKubernetesVhost is success
+  tags: createSymlink
+  register: createSymlink
+
+- name: Reload Systemd, Enable and Restart Nginx Service
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: "{{item}}"
+    enabled: yes
+  with_items:
+    - nginx
+  when: createSymlink is success
+
+...

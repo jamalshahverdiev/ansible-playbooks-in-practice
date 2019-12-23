@@ -1,0 +1,100 @@
+---
+- hosts: local
+  tasks:
+    - name: Download Files
+      get_url:
+        url: "{{ item.src }}"
+        dest: "{{ item.dst }}"
+        owner: "{{ ansible_ssh_user }}"
+        group: "{{ ansible_ssh_user }}"
+        mode: 0755
+      with_items:
+        - { src: 'https://pkg.cfssl.org/R1.2/cfssl_linux-amd64', dst: '{{ binaryDestination }}/cfssl' }
+        - { src: 'https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64', dst: '{{ binaryDestination }}/cfssljson' }
+      tags:
+        - downloadCertGenerator
+      register: downloadCertGenerator
+    
+    - name: Unarchive all files
+      unarchive: 
+        src: "{{ archivesFolder }}/{{ item }}"
+        dest: "{{ binaryDestination }}/"
+      with_items:
+        - kubectl.tar.bz2
+      tags:
+        - unarchiveKubeFiles
+      register: unarchiveKubeFiles
+    
+    - name: Copy CA and AdminCsr files
+      template:
+        src: "templates/{{ item }}"
+        dest: "{{ outputDir }}/{{ item }}"
+      with_items:
+        - ca-config.json 
+        - ca-csr.json 
+        - admin-csr.json 
+        - kube-controller-manager-csr.json
+        - kube-proxy-csr.json 
+        - kube-scheduler-csr.json 
+        - kubernetes-csr.json 
+        - service-account-csr.json
+        - kube-scheduler.yaml
+      register: copyCaAdminFiles
+      tags: copyCaAdminFiles
+    
+    - name: Create CA and Admin certificates
+      shell: '{{ item }}'
+      with_items:
+        - cfssl gencert -initca ca-csr.json | cfssljson -bare ca
+        - cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes admin-csr.json | cfssljson -bare admin
+        - cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
+        - cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-proxy-csr.json | cfssljson -bare kube-proxy
+        - cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-scheduler-csr.json | cfssljson -bare kube-scheduler
+        - cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -hostname={{CNAME}} -profile=kubernetes kubernetes-csr.json | cfssljson -bare kubernetes
+        - cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes service-account-csr.json | cfssljson -bare service-account
+      args:
+        chdir: "{{ outputDir }}"
+      when: copyCaAdminFiles is success
+      register: createCaAdminCerts
+      tags: createCaAdminCerts
+    
+    - name: Create Template files
+      template: 
+        src: "templates/worker-csr.json.j2" 
+        dest: "{{ outputDir }}/{{ item }}-csr.json"
+      with_items:
+        - "{{workers}}"
+      register: createKubeletClientCerificates
+      tags: createKubeletClientCerificates
+      when: createCaAdminCerts is success
+    
+    - name: Generate Worker Certificates
+      shell: 'cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -hostname={{item.ip}},{{item.name}} -profile=kubernetes {{item.name}}-csr.json | cfssljson -bare {{item.name}}'
+      args:
+        chdir: "{{ outputDir }}"
+      with_items:
+        - "{{wnodes[0]}}"
+        - "{{wnodes[1]}}"
+        - "{{wnodes[2]}}"
+      register: generateWorkerCerts
+      tags: generateWorkerCerts
+      when: createKubeletClientCerificates is success
+    
+    - name: Create Script file for Worker configurations
+      template:
+        src: "templates/genKubeConfigWorkers.sh.j2"
+        dest: "{{ outputDir }}/genKubeConfigWorkers.sh"
+        mode: '0777'
+      register: createScriptForkerConfigs
+      tags: createScriptForkerConfigs
+      when: generateWorkerCerts is success
+    
+    - name: Execute Script file for Worker configurations
+      shell: './genKubeConfigWorkers.sh'
+      args:
+        chdir: "{{ outputDir }}"
+      register: executeWorkerConfigScript
+      tags: executeWorkerConfigScript
+      when: createScriptForkerConfigs is success
+
+...

@@ -1,0 +1,83 @@
+---
+- name: Copy certificates to the Worker nodes
+  copy:
+    src: "{{item.src}}"
+    dest: "{{item.dst}}"
+  with_items:
+    - { src: '{{outputDir}}/ca.pem', dst: '/var/lib/kubernetes/' }
+    - { src: '{{outputDir}}/{{inventory_hostname}}.kubernetes.loc-key.pem', dst: '/var/lib/kubelet/' }
+    - { src: '{{outputDir}}/{{inventory_hostname}}.kubernetes.loc.pem', dst: '/var/lib/kubelet/' }
+    - { src: '{{outputDir}}/{{inventory_hostname}}.kubernetes.loc.kubeconfig', dst: '/var/lib/kubelet/kubeconfig' }
+    - { src: '{{outputDir}}/kube-proxy.kubeconfig', dst: '/var/lib/kube-proxy/kubeconfig' }
+  register: copyCertsToWorkers
+  tags: copyCertsToWorkers
+  when: installPacks is success and createKubeFolders is success
+
+#- name: Copy KubeConfig to the Worker nodes
+#  copy:
+#    src: "{{userHomeFolder}}/{{item}}"
+#    dest: "{{userHomeFolder}}/"
+#  with_items:
+#    - "{{inventory_hostname}}.kubernetes.loc.kubeconfig"
+#    - kube-proxy.kubeconfig
+#  register: copyConfigsToWorkers
+#  tags: copyConfigsToWorkers
+#  when: installPacks is success and createKubeFolders is success
+
+- name: Unarchive Kuberenetes Binary files
+  unarchive:
+    src: "{{ archivesFolder }}/{{ item.src }}"
+    dest: "{{ item.dst }}/"
+  with_items:
+    - { src: 'kubelet.tar.bz2', dst: '{{ binaryDestination }}' }
+    - { src: 'kubectl.tar.bz2', dst: '{{ binaryDestination }}' }
+    - { src: 'kube-proxy.tar.bz2', dst: '{{ binaryDestination }}' }
+    - { src: 'runc.tar.bz2', dst: '{{ binaryDestination }}' }
+    - { src: 'runsc.tar.bz2', dst: '{{ binaryDestination }}' }
+    - { src: 'crictl.tar.bz2', dst: '{{ binaryDestination }}' }
+    - { src: 'cniplugins.tar.bz2', dst: '/opt/cni/bin' }
+    - { src: 'containerd.tar.bz2', dst: '/bin' }
+  tags:
+    - unarchiveKubernetesFiles
+  register: unarchiveKubernetesFiles
+  when: copyCertsToWorkers is success 
+
+- name: Copy ContainerD config file
+  template:
+    src: "{{item.src}}"
+    dest: "{{item.dst}}"
+  with_items:
+    - { src: 'templates/config.toml.j2', dst: '/etc/containerd/config.toml' }
+    - { src: 'templates/kubelet-config.yaml.j2', dst: '/var/lib/kubelet/kubelet-config.yaml' }
+    - { src: 'templates/kube-proxy-config.yaml', dst: '/var/lib/kube-proxy/kube-proxy-config.yaml' }
+  register: copyContainerdConfig
+  tags: copyContainerdConfig
+  when: unarchiveKubernetesFiles is success
+
+- name: Copy System Worker UNIT Files
+  template:
+    src: "{{item.src}}"
+    dest: "{{item.dst}}"
+  with_items:
+    - { src: 'templates/kubelet.service.j2', dst: '/etc/systemd/system/kubelet.service' }
+    - { src: 'templates/containerd.service.j2', dst: '/etc/systemd/system/containerd.service' }
+    - { src: 'templates/kube-proxy.service.j2', dst: '/etc/systemd/system/kube-proxy.service' }
+  register: copyYamlConfigFiles
+  tags: copyYamlConfigFiles
+  when: copyContainerdConfig is success
+      
+- name: Reload Systemd, Enable and Start all Kubernetes Services
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: "{{item}}"
+    enabled: yes
+  with_items:
+    - containerd
+    - kubelet 
+    - kube-proxy
+  register: enableStartServices
+  tags: enableStartServices
+  when: copyYamlConfigFiles is success
+
+...

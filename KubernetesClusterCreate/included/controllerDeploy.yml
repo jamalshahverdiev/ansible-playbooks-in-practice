@@ -1,0 +1,116 @@
+---
+- name: Create Kubernetes Directories
+  file:
+    path: "{{item}}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0775
+  with_items:
+    - "{{kubefolders}}"
+  register: createKubeFolders
+  tags: createKubeFolders
+
+- name: Copy CA, Kubernetes and Service certificates for ETCD to the Controller nodes
+  template:
+    src: "{{outputDir}}/{{item}}"
+    dest: "{{kubefolders[2]}}/"
+  with_items:
+    - ca.pem 
+    - kubernetes.pem
+    - kubernetes-key.pem
+  register: copyEtcdCerts
+  tags: copyEtcdCerts 
+  when: createKubeFolders is success
+
+- name: Copy CA, Kubernetes and Service certificates to the Controller nodes
+  template:
+    src: "{{outputDir}}/{{item}}"
+    dest: "{{kubefolders[1]}}/"
+  with_items:
+    - ca.pem
+    - ca-key.pem
+    - kubernetes.pem
+    - kubernetes-key.pem
+    - service-account-key.pem
+    - service-account.pem
+    - encryption-config.yaml
+  register: copyCertYaml
+  tags: copyCertYaml
+  when: createKubeFolders is success
+
+- name: Unarchive ETCD Tar file
+  unarchive:
+    src: "{{ archivesFolder }}/etcd.tar.bz2"
+    dest: "{{binaryDestination}}/"
+    remote_src: no
+  register: unarchiveEtcdTar
+  tags: unarchiveEtcdTar
+
+- name: Copy KubeConfig files to the Controller nodes
+  template:
+    src: "{{outputDir}}/{{item.src}}"
+    dest: "{{item.dst}}/"
+  with_items:
+    - { src: 'admin.kubeconfig', dst: "/root" } 
+    - { src: 'kube-controller-manager.kubeconfig', dst: "{{kubefolders[1]}}" }
+    - { src: 'kube-scheduler.kubeconfig', dst: "{{kubefolders[1]}}" }
+    - { src: 'encryption-config.yaml', dst: "{{kubefolders[1]}}" }
+    - { src: 'kube-scheduler.yaml', dst: "{{kubefolders[0]}}" }
+  register: copyKubeConfigFiles
+  tags: copyKubeConfigFiles
+
+- name: Copy all System Unit and Config files to the remote host
+  template:
+    src: "{{item.src}}"
+    dest: "{{item.dst}}"
+  with_items:
+    - { src: 'templates/etcd.service.j2', dst: '/etc/systemd/system/etcd.service' }
+    - { src: 'templates/kube-apiserver.service.j2', dst: '/etc/systemd/system/kube-apiserver.service' }
+    - { src: 'templates/kube-controller-manager.service.j2', dst: '/etc/systemd/system/kube-controller-manager.service' }
+    - { src: 'templates/kube-scheduler.service.j2', dst: '/etc/systemd/system/kube-scheduler.service' }
+    - { src: 'templates/admin.kubeconfig.ClusterRole.yml', dst: '{{ userHomeFolder }}/' }
+    - { src: 'templates/admin.kubeconfig.BindClusterRole.yml', dst: '{{ userHomeFolder }}/' }
+  register: copySystemUnitFiles
+  tags: copySystemUnitFiles
+  when: unarchiveEtcdTar is success 
+
+- name: Unarchive Kuberenetes Binary files
+  unarchive:
+    src: "{{ archivesFolder }}/{{ item }}"
+    dest: "{{ binaryDestination }}/"
+  with_items:
+    - kube-apiserver.tar.bz2
+    - kube-controller-manager.tar.bz2
+    - kubectl.tar.bz2
+    - kube-scheduler.tar.bz2
+  tags:
+    - unarchiveKubernetesFiles
+  register: unarchiveKubernetesFiles
+  when: copyKubeConfigFiles is success and copySystemUnitFiles is success
+
+- name: Reload Systemd, Enable and Restart ETCD Service
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: "{{item}}"
+    enabled: yes
+  with_items:
+    - etcd
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+  register: enableStartServices
+  tags: enableStartServices
+  when: unarchiveKubernetesFiles is success and unarchiveEtcdTar is success
+
+- name: Create ClusterRole and BindClusterRole
+  shell: "{{item}}"
+  with_items:
+    - 'kubectl apply --kubeconfig admin.kubeconfig -f {{ userHomeFolder }}/admin.kubeconfig.ClusterRole.yml'
+    - 'kubectl apply --kubeconfig admin.kubeconfig -f {{ userHomeFolder }}/admin.kubeconfig.BindClusterRole.yml'
+  when: enableStartServices is success and inventory_hostname in groups['kubecontrollers'][0] 
+  tags: applyKubeConfigs
+  register: applyKubeConfigs
+
+...

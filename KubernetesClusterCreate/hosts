@@ -1,0 +1,29 @@
+[local]
+controller ansible_connection=local
+
+[kubecontrollers]
+kubecontroller[1:3] ansible_ssh_user=root ansible_ssh_pass='freebsd' 
+
+[kubeworkers]
+kubeworkernode[1:3] ansible_ssh_user=root ansible_ssh_pass='freebsd'
+
+[kubeworkers:vars]
+backendEnvFile=taskbackend
+nodeServicePort=3001
+sbsServiceName=protasksbswssrv
+frontTemplateName=taskfrontenv
+
+[apilbs]
+apiloadbalancer ansible_ssh_user=root ansible_ssh_pass='freebsd'
+
+[apilbs:vars]
+ansible_become=false
+
+[linux:children]
+kubecontrollers
+kubeworkers
+apilbs
+
+[linux:vars]
+playbookpath=/vagrant/ansible
+

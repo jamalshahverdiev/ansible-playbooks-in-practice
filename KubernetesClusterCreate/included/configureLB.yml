@@ -1,0 +1,47 @@
+---
+- name: Install nginx package
+  apt: 
+    name: nginx
+    state: present
+  register: nginxInstall
+  tags: nginxInstall
+
+- name: Create Include folder for Nginx
+  file:
+    path: /etc/nginx/tcpconf.d
+    state: directory
+  register: createNginxIncludeFolder
+  tags: createNginxIncludeFolder
+  when: nginxInstall is success
+
+- name: Append line to the nginx.conf file
+  lineinfile:
+    state: present
+    insertafter: EOF
+    dest: /etc/nginx/nginx.conf
+    line: "{{ item }}"
+  with_items:
+    - include /etc/nginx/tcpconf.d/*;
+  register: includeNginxFolder
+  tags: includeNginxFolder
+  when: createNginxIncludeFolder is success
+
+- name: Configure kubernetes.conf vHost
+  template:
+    src: "templates/kubernetes.conf.j2"
+    dest: "/etc/nginx/tcpconf.d/kubernetes.conf"
+  tags: configureKubernetesVhost
+  register: configureKubernetesVhost
+  when: includeNginxFolder is success
+
+- name: Reload Systemd, Enable and Restart Nginx Service
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: "{{item}}"
+    enabled: yes
+  with_items:
+    - nginx
+  when: configureKubernetesVhost is success
+
+...

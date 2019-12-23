@@ -1,0 +1,16 @@
+---
+- hosts: linux
+  gather_facts: true
+  tasks:
+    - name: Copy Motd file
+      copy:
+        src: templates/motd
+        dest: /etc/motd
+        force: yes
+
+- hosts: apilbs
+  gather_facts: true
+  tasks:
+    - include: included/configureLB.yml
+    - include: included/apilbdeploy.yml
+...

@@ -1,0 +1,16 @@
+---
+archivesFolder: archives
+binaryDestination: /usr/local/bin
+userHomeFolder: /root
+CNAME: 10.32.0.1,10.234.100.182,kubecontroller1.kubernetes.loc,10.234.100.183,kubecontroller2.kubernetes.loc,10.234.100.184,kubecontroller3.kubernetes.loc,10.234.100.181,apiloadbalancer.kubernetes.loc,127.0.0.1,localhost,kubernetes.default
+apiLbAddress: 10.234.100.181
+workers: ['kubeworkernode1.kubernetes.loc', 'kubeworkernode2.kubernetes.loc', 'kubeworkernode3.kubernetes.loc']
+controllerIps: ['10.234.100.182', '10.234.100.183', '10.234.100.184']
+kubefolders: ['/etc/kubernetes/config', '/var/lib/kubernetes', '/etc/etcd', '/var/lib/etcd', '/var/log/kubernetes']
+outputDir: output
+etcdConfigPath: /etc/etcd
+ETCD_NAME: "{{inventory_hostname}}.kubernetes.loc"
+INITIAL_CLUSTER: kubecontroller1.kubernetes.loc=https://10.234.100.182:2380,kubecontroller2.kubernetes.loc=https://10.234.100.183:2380,kubecontroller3.kubernetes.loc=https://10.234.100.184:2380
+workersSH: kubeworkernode1.kubernetes.loc kubeworkernode2.kubernetes.loc kubeworkernode3.kubernetes.loc
+wnodes: [{ name: 'kubeworkernode1.kubernetes.loc', ip: '10.234.100.185' }, { name: 'kubeworkernode2.kubernetes.loc', ip: '10.234.100.186' }, { name: 'kubeworkernode3.kubernetes.loc', ip: '10.234.100.187' }]
+...

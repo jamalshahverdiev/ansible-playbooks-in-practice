@@ -1,0 +1,12 @@
+---
+- name: Unarchive all files
+  unarchive: 
+    src: "{{ archivesFolder }}/{{ item }}"
+    dest: "{{ binaryDestination }}/"
+  with_items:
+    - kubectl.tar.bz2
+  tags:
+    - unarchiveKubeFiles
+  register: unarchiveKubeFiles
+
+...
