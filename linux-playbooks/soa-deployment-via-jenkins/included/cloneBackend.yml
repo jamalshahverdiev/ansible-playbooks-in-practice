@@ -1,0 +1,13 @@
+- name: Clone or Pull SBS Repository
+  vars:
+    ansible_become: false
+  git:
+   repo: "https://{{ gitUser | urlencode }}:{{ gitPass }}@{{gitUrl}}/ProSBS/{{ backRepoName }}.git"
+   dest: "{{ backendRepoFolder }}/{{ backRepoName }}"
+   update: yes
+   version: master
+   force: yes
+  tags:
+    - cloneBackendRepo
+  register: cloneBackendRepo
+  when: stopNginx is success

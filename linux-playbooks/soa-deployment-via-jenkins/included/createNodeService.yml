@@ -1,0 +1,61 @@
+---
+- name: Create Node App Directory
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ nodeServiceName }}"
+  register: createNodeAppFolder
+  when: cloneSBSRepo is success
+
+- name: Create JSON configuration file
+  template:
+    src: templates/nodeconfig.json.j2
+    dest: "{{ nodeServiceName }}/config.json"
+    backup: yes
+  tags:
+    - createJsonFile
+  when: createNodeAppFolder is success
+  register: createJsonFile
+
+- name: Install packages from package.json file for the SBS service
+  npm:
+    path: "{{ nodeFolder }}/{{ sbsRepoName }}"
+  tags:
+    - installNpmPackages
+  register: installNpmPackages
+  when: cloneSBSRepo is success
+
+- name: Build NPM from source code
+  shell: npm run build
+  args:
+    chdir: "{{ nodeFolder }}/{{ sbsRepoName }}"
+  tags:
+    - npmRunBuild
+  when: installNpmPackages is success
+  register: npmRunBuild
+
+- name: Copy all source code files to the service folder
+  tags:
+    - copyRecursively
+  copy: 
+    src: "{{ nodeFolder }}/{{ sbsRepoName }}/" 
+    dest: "{{ nodeServiceName }}" 
+    remote_src: yes 
+    directory_mode: yes
+  register: copyFilestoServiceFolder
+  when: npmRunBuild is success
+
+- name: Change owner and group of node service files
+  tags:
+    - chownRecursively
+  file: 
+    dest: "{{ nodeServiceName }}" 
+    owner: "{{ nodeServiceUser }}" 
+    group: "{{ nodeServiceUser }}" 
+    recurse: yes
+  register: chownRecursively
+  when: copyFilestoServiceFolder is success
+  notify: Restart_SBSsvc
+
+...

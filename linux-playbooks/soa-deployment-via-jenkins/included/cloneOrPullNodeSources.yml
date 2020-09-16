@@ -1,0 +1,13 @@
+---
+- name: Clone or Pull SBS Repository
+  git:
+   repo: "https://{{ gitUser | urlencode }}:{{ gitPass }}@{{gitUrl}}/ProSBS/{{ sbsRepoName }}.git"
+   dest: "{{ nodeFolder }}/{{ sbsRepoName }}"
+   update: yes
+   version: master
+  tags:
+    - cloneSBSRepo
+  register: cloneSBSRepo
+  notify: Restart_SBSsvc
+
+...

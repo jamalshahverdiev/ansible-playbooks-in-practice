@@ -1,0 +1,93 @@
+---
+- name: Uncomment DNS Resolve in /etc/hosts file
+  replace:
+    dest: /etc/hosts
+    regexp: "#{{ ansible_eth0.ipv4.address }} core.prospectsmb.com app.prospectsmb.com protask.az core.protask.az"
+    replace: "{{ ansible_eth0.ipv4.address }} core.prospectsmb.com app.prospectsmb.com protask.az core.protask.az"
+  tags: uncommentFronBackInHosts
+  register: uncommentFronBackInHosts
+  when: changeOwnerAndPermissions is success
+
+- name: Change Nginx listener from 80 to 8080 for Frontend
+  replace: 
+    dest: "/etc/nginx/conf.d/{{ frontSmokeDomain }}.conf"
+    regexp: 'listen       80'
+    replace: 'listen       8080'
+  tags: changeFrontListenerTo8080
+  register: changeFrontListenerTo8080
+  when: uncommentFronBackInHosts is success
+
+- name: Change Nginx listener from 80 to 8080 for Backend
+  replace:
+    dest: "/etc/nginx/conf.d/core.{{ domainName }}.conf"
+    regexp: 'listen       80'
+    replace: 'listen       8080'
+  tags: changeBackendListenerTo8080
+  register: changeBackendListenerTo8080
+  when: changeFrontListenerTo8080 is success
+
+- name: Restart_Nginx
+  systemd:
+    name: nginx
+    state: restarted
+  register: restartnginx
+  tags:
+    - restartnginx
+  when: changeBackendListenerTo8080 is success
+
+- name: Frontend SmokeTest 
+  uri: 
+    url: "http://{{ frontSmokeDomain }}:8080/manifest.json" 
+    return_contents: yes
+    status_code: 200
+    body_format: json
+#  until: frontSmokeJsonResponse.json.short_name == "Prospect SMB"
+#  retries: 1
+#  delay: 1
+  register: frontSmokeJsonResponse
+  tags:
+    - frontSmokeJsonResponse
+  when: restartnginx is success
+
+- name: Backend SmokeTest for core.prospectsmb.com 
+  uri:
+    url: "http://core.{{ domainName }}:8080/v1/testDatabase"
+    return_contents: yes
+    status_code: 200
+    body_format: json
+  tags: 
+    - checkBackendDBConnection
+  register: checkBackendDBConnection
+  when: frontSmokeJsonResponse.json.short_name is defined
+
+- name: Comment DNS resolve in /etc/hosts file
+#  debug:
+#      var: checkBackendDBConnection.json.status
+  replace:
+    dest: /etc/hosts
+    regexp: "{{ ansible_eth0.ipv4.address }} core.prospectsmb.com app.prospectsmb.com protask.az core.protask.az"
+    replace: "#{{ ansible_eth0.ipv4.address }} core.prospectsmb.com app.prospectsmb.com protask.az core.protask.az"
+  tags: commentFronBackInHosts
+  register: commentFronBackInHosts
+  when: checkBackendDBConnection.json.status == 'success'
+
+- name: Change Nginx listener back to 80 from 8080 for Frontend
+  replace:
+    dest: "/etc/nginx/conf.d/{{ frontSmokeDomain }}.conf"
+    regexp: 'listen       8080'
+    replace: 'listen       80'
+  tags: changeFrontListenerTo80
+  register: changeFrontListenerTo80
+  when: commentFronBackInHosts is success
+
+- name: Change Nginx listener back to 80 from 8080 for Backend
+  replace:
+    dest: "/etc/nginx/conf.d/core.{{ domainName }}.conf"
+    regexp: 'listen       8080'
+    replace: 'listen       80'
+  tags: changeBackendListenerTo80
+  register: changeBackendListenerTo80
+  notify: Restart_Nginx
+  when: changeFrontListenerTo80 is success
+
+...

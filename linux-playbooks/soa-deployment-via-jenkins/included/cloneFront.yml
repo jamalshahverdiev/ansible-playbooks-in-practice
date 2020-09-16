@@ -1,0 +1,11 @@
+- name: Clone or Pull SBS Repository
+  git:
+   repo: "https://{{ gitUser | urlencode }}:{{ gitPass }}@{{gitUrl}}/ProSBS/{{ frontRepoName }}.git"
+   dest: "{{ frontRepoFolder }}/{{ frontRepoName }}"
+   update: yes
+   version: master
+   force: yes
+  tags:
+    - cloneFrontRepo
+  register: cloneFrontRepo
+  when: stopNginx is success

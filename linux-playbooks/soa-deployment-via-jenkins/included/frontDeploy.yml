@@ -1,0 +1,77 @@
+---
+- name: Create Front Environment File
+  template:
+    src: "templates/{{ frontTemplateName }}.j2"
+    dest: "{{ frontRepoFolder }}/{{ frontRepoName }}/.env"
+    backup: yes
+  tags:
+    - createFrontEnvFile
+  register: createFrontEnvFile
+
+- name: Create Front App Directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ webUser }}" 
+    group: "{{ webUser }}" 
+    mode: 0711
+  with_items:
+    - "{{ frontDestPubHtmlFolder }}"
+  tags:
+    - createFrontPubHtmlFolder
+  register: createFrontPubHtmlFolder
+  when: createFrontEnvFile is success 
+
+- name: Clean Front Build Folder
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    - "{{ frontRepoFolder }}/{{ frontRepoName }}/build/"
+    - "{{ frontDestPubHtmlFolder }}/"
+  tags: 
+    - cleanFrontBuildDir
+  when: createFrontEnvFile is success
+  register: cleanFrontBuildDir
+
+- name: Change owner of Front Repository Folder
+  file: "dest={{ frontRepoFolder }} owner={{ ansible_ssh_user }} group={{ ansible_ssh_user }} recurse=yes"
+  tags: 
+    - changeOwnerToJenkins
+  when: cleanFrontBuildDir is success
+  register: changeOwnerToJenkins
+
+- name: Install NPM packages for the Front
+  vars:
+    ansible_become: false
+  npm:
+    path: "{{ frontRepoFolder }}/{{ frontRepoName }}"
+  tags:
+    - installFrontNpmPacks
+  register: installFrontNpmPacks
+  when: changeOwnerToJenkins is success
+
+- name: Build Front source code file with NPM
+  shell: npm run build
+  args:
+    chdir: "{{ frontRepoFolder }}/{{ frontRepoName }}"
+  tags:
+    - npmFrontRunBuild
+  when: installFrontNpmPacks is success
+  register: npmFrontRunBuild
+
+- name: Copy content of Front Build folder to Public_HTML folder
+  tags:
+    - copyFrontBuildRecursively
+  copy: 
+    src: "{{ frontRepoFolder }}/{{ frontRepoName }}/build/" 
+    dest: "{{ frontDestPubHtmlFolder }}" 
+    owner: "{{ webUser }}" 
+    group: "{{ webUser }}" 
+    mode: '0711' 
+    remote_src: yes 
+    directory_mode: yes
+  register: copyFrontBuildRecursively
+  when: npmFrontRunBuild is success
+
+...

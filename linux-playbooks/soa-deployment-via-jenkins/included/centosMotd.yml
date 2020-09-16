@@ -1,0 +1,7 @@
+- name: Create CentOS MOTD
+  template:
+    src: templates/centosMotd.j2
+    dest: /etc/motd
+    backup: yes
+  tags:
+    - centosMotd

@@ -1,0 +1,115 @@
+---
+- name: Create Backend App Directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ webUser }}" 
+    group: "{{ webUser }}" 
+    mode: 0711
+  with_items:
+    - "{{ publicHtmlFolder }}/core.{{ domainName }}"
+  tags:
+    - createBackendPubHtmlFolder
+  register: createBackendPubHtmlFolder
+  when: cloneBackendRepo is success 
+
+- name: Clean Backend PublicHTML and source vendor folder
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    - "{{ publicHtmlFolder }}/core.{{ domainName }}"
+    - "{{ backendRepoFolder }}/{{ backRepoName }}/vendor"
+  tags:
+    - cleanBackendBuildDir
+  when: createBackendPubHtmlFolder is success
+  register: cleanBackendBuildDir
+  
+- name: Install Composer dependencies for Backend
+  vars:
+    ansible_become: false
+  shell: composer install
+  args:
+    chdir: "{{ backendRepoFolder }}/{{ backRepoName }}"
+  register: installBackendDependencies
+  when: cleanBackendBuildDir is success
+
+- name: Copy content of Backend folder to Public_HTML folder
+  copy: 
+    src: "{{ backendRepoFolder }}/{{ backRepoName }}/" 
+    dest: "{{ publicHtmlFolder }}/core.{{ domainName }}" 
+    owner: "{{ webUser }}"
+    group: "{{ webUser }}" 
+    mode: '0711' 
+    remote_src: yes 
+    directory_mode: yes
+  tags:
+    - copyBackendRecursively
+  register: copyBackendRecursively
+  when: installBackendDependencies is success
+
+- name: Delete Backend HiddenFiles
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "{{ publicHtmlFolder }}/core.{{ domainName }}/.git"
+    - "{{ publicHtmlFolder }}/core.{{ domainName }}/.gitignore"
+    - "{{ publicHtmlFolder }}/core.{{ domainName }}/.env.test"
+    - "{{ publicHtmlFolder }}/core.{{ domainName }}/README.md"
+  tags:
+    - deleteBackendHiddenFiles
+  when: copyBackendRecursively is success
+  register: deleteBackendHiddenFiles
+
+- name: Create Backend Environment File
+  template:
+    src: "templates/{{backendEnvFile}}.env.j2"
+    dest: "{{ publicHtmlFolder }}/core.{{ domainName }}/.env"
+    owner: "{{ webUser }}"
+    group: "{{ webUser }}"
+    backup: no
+  tags:
+    - createBackendEnvFile
+  register: createBackendEnvFile
+  when: deleteBackendHiddenFiles is success
+
+- name: Get New Vault Token from File
+  shell: "cat /root/scripts/{{ vaultNewTokenFileName }}.txt"
+  register: getNewVaultToken
+  tags:
+    - getNewVaultToken
+  when: createBackendEnvFile is success
+
+- name: Replace SMB old Vault Token to the new
+  replace:
+    dest: "{{ publicHtmlFolder }}/core.{{ domainName }}/config/runtime-evaluated.php"
+    regexp: "{{ replaceToken }}"
+    replace: "{{ getNewVaultToken.stdout }}"
+  tags: changeOldVaultTokenToNew
+  register: changeOldVaultTokenToNew
+  when: getNewVaultToken is success  
+
+- name: Update changes inside of Schemas for Database
+  shell: "{{ item }}"
+  with_items:
+    - "echo y | php bin/console doctrine:migrations:migrate"
+  args:
+    chdir: "{{ publicHtmlFolder }}/core.{{ domainName }}/"
+  tags:
+    - migrateDatabase
+  when: changeOldVaultTokenToNew is success
+  register: migrateDatabase
+
+- name: Change owner/group to Nginx and permissions to 711 for PublicHTML folder
+  file:
+    dest: "{{ publicHtmlFolder }}"
+    owner: "{{ webUser }}"
+    group: "{{ webUser }}"
+    mode: u=rwX,g=X,o=X
+    recurse: yes
+  tags: changeOwnerAndPermissions
+  when: migrateDatabase is success
+  register: changeOwnerAndPermissions
+
+...

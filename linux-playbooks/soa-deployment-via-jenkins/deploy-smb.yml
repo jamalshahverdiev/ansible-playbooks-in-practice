@@ -1,0 +1,43 @@
+---
+-
+  hosts: "{{ envname }}"
+  gather_facts: true
+  tasks:
+    - include: included/cloneOrPullNodeSources.yml
+      tags:
+        - cloneOrPullNodeSources
+
+    - include: included/createNodeService.yml
+      tags:
+        - createNodeService
+      register: createNodeService
+
+    - name: Stop Nginx
+      systemd:
+        name: nginx
+        state: stopped
+      tags:
+        - stopNginx
+      register: stopNginx
+
+    - include: included/cloneFront.yml 
+      
+    - include: included/frontDeploy.yml
+      tags:
+        - frontDeploy
+      register: cloneFrontCodes
+      when: cloneFrontRepo is success
+
+    - include: included/cloneBackend.yml
+
+    - include: included/backendDeploy.yml
+      tags: 
+        - backendDeploy
+      register: backendDeploy
+      when: stopNginx is success
+
+    - include: included/frontBackSmokeTests.yml
+
+  handlers:
+    - include: handlers/allhandlers.yml
+...

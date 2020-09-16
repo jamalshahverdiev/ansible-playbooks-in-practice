@@ -1,0 +1,12 @@
+---
+- name: Restart_SBSsvc
+  systemd:
+    name: "{{ sbsServiceName }}"
+    state: restarted
+
+- name: Restart_Nginx
+  systemd:
+    name: nginx
+    state: restarted
+
+...
