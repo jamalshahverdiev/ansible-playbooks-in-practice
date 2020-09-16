@@ -3,7 +3,7 @@
 $ ansible-playbook deploy-smb.yml --extra-vars "env=prod variable_host=frontend"
 ```
 
-#### Deploy ProTask or SMB with External variable **envname** to choose deploy environment from **hosts** file (ProTask or SMB):
+#### Deploy SMB with External variable **envname** to choose deploy environment from **hosts** file (SMB):
 ```bash
 $ ansible-playbook deploy-smb.yml --extra-vars "envname=protasks" --limit protasks[0]
 $ ansible-playbook deploy-smb.yml --extra-vars "envname=backends" --limit backends[0]
@@ -28,4 +28,9 @@ $ ansible-playbook deploy-smb.yml --limit backends[0] --vault-id vault_password.
 #### Call tagged task with name **cloneOrPullNodeSources** from **deploy-smb.yml** file
 ```bash
 $ ansible-playbook deploy-smb.yml --tags cloneOrPullNodeSources --limit backends[0] --ask-vault-pass
+```
+
+#### We can edit hosts, group_vars/backends and group_vars/protasks file with the following command:
+```bash
+$ ansible-vault edit hosts
 ```
