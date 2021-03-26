@@ -1,7 +1,7 @@
 Cheetah==2.4.4
 Landscape-Client==14.12
 PAM==0.4.2
-PyYAML==5.1
+PyYAML==5.4
 SecretStorage==2.0.0
 Twisted-Core==13.2.0
 Twisted-Names==13.2.0
